@@ -48,6 +48,7 @@ export interface RenderModel {
   planUsageLabel: string;
   planUsageSummary: string;
   planTokensSummary: string;
+  planUsageColor: string;
   stats: StatCard[];
   quickRanges: QuickRangeView;
   filterValues: FilterValues;
@@ -84,7 +85,9 @@ export function renderApp(model: RenderModel): string {
           ${model.planOptions.map((option) => renderPlanOption(option, model.activePlan)).join("")}
         </div>
         <div class="plan-usage">
-          <div class="plan-usage__ring" style="--progress: ${model.planUsagePercent.toFixed(2)}">
+          <div class="plan-usage__ring" style="--progress: ${model.planUsagePercent.toFixed(
+            2,
+          )}; --ring-color: ${model.planUsageColor}">
             <div class="plan-usage__ring-inner">
               <span class="plan-usage__percent">${model.planUsageLabel}</span>
               <span class="plan-usage__caption">已使用</span>
@@ -142,9 +145,6 @@ export function renderApp(model: RenderModel): string {
                 <input type="time" data-filter="end-time" value="${model.filterValues.endTime}" step="60" />
               </div>
             </label>
-            <div class="custom-range__actions">
-              <button class="file-input" data-action="apply-custom-range">应用</button>
-            </div>
           </div>
         </div>
       </div>

@@ -83,6 +83,8 @@ function init(): void {
   bindDelegatedEvents();
   bindDropEvents();
   bindFloatingDragEvents();
+  bindOutsidePopoverClose();
+  window.addEventListener("resize", handleResizeForFloating);
 }
 
 function bindGlobalDragGuards(): void {
@@ -110,8 +112,11 @@ function bindDelegatedEvents(): void {
       Boolean(target.closest("[data-action='toggle-range']"));
     if (state.rangePopoverOpen && !withinPopover) {
       state.rangePopoverOpen = false;
-      render();
-      return;
+      queueMicrotask(() => {
+        if (!state.rangePopoverOpen) {
+          render();
+        }
+      });
     }
 
     const planElement = target.closest<HTMLElement>("[data-action='plan']");
@@ -133,14 +138,6 @@ function bindDelegatedEvents(): void {
     if (preset?.dataset.preset) {
       event.preventDefault();
       applyPresetRange(preset.dataset.preset);
-      return;
-    }
-
-    const applyCustom = target.closest<HTMLElement>("[data-action='apply-custom-range']");
-    if (applyCustom) {
-      event.preventDefault();
-      state.rangePopoverOpen = false;
-      render();
       return;
     }
 
@@ -268,16 +265,36 @@ function bindFloatingDragEvents(): void {
   });
 }
 
+function bindOutsidePopoverClose(): void {
+  window.addEventListener(
+    "click",
+    (event) => {
+      if (!state.rangePopoverOpen) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (!target) {
+        return;
+      }
+      const within =
+        Boolean(target.closest("[data-role='range-popover']")) ||
+        Boolean(target.closest("[data-action='toggle-range']"));
+      if (within) {
+        return;
+      }
+      state.rangePopoverOpen = false;
+      render();
+    },
+    false,
+  );
+}
+
 function applyFloatingInlineStyle(container: HTMLElement, pos?: { left: number; top: number }): void {
   if (pos) {
     container.style.left = `${Math.round(pos.left)}px`;
     container.style.top = `${Math.round(pos.top)}px`;
     container.style.right = "auto";
     container.style.position = "fixed";
-  } else {
-    container.style.left = "";
-    container.style.top = "";
-    container.style.right = "";
   }
 }
 
@@ -305,6 +322,7 @@ function handlePlanChange(plan: PlanId): void {
     return;
   }
   state.plan = plan;
+  state.rangePopoverOpen = false;
   render();
 }
 
@@ -323,6 +341,7 @@ function handleQuickRange(rangeKey: string): void {
     endTime: toTimeInput(match.end),
   };
   state.activeQuickRangeKey = match.key;
+  state.rangePopoverOpen = false;
   render();
 }
 
@@ -392,6 +411,7 @@ function render(): void {
     activePlan: state.plan,
     planUsagePercent: percent,
     planUsageLabel: percentLabel,
+    planUsageColor: usageColor(percent),
     planUsageSummary: `${planConfig.label} 套餐已使用 ${formatNumber(summary.totalTokens)} tokens，占比 ${percentLabel}`,
     planTokensSummary: `${formatNumber(summary.totalTokens)} / ${formatNumber(planConfig.tokenLimit)} tokens`,
     stats: summary.stats,
@@ -409,9 +429,14 @@ function render(): void {
   if (state.rangePopoverOpen) {
     positionRangePopover();
   }
-  // 应用拖动后的位置（避免首次渲染覆盖 inline 样式）
   const container = document.querySelector<HTMLElement>("[data-role='floating-time']");
-  applyFloatingInlineStyle(container as HTMLElement, state.floatingPos);
+  if (container) {
+    if (state.floatingPos) {
+      applyFloatingInlineStyle(container, state.floatingPos);
+    } else {
+      alignFloatingContainer(container);
+    }
+  }
 }
 
 function summarize(records: UsageRecord[]): SummaryResult {
@@ -637,6 +662,16 @@ function computeUsagePercent(totalTokens: number, limit: number): number {
   return Math.min(100, (totalTokens / limit) * 100);
 }
 
+function usageColor(percent: number): string {
+  if (percent < 60) {
+    return "var(--success)";
+  }
+  if (percent < 85) {
+    return "#facc15";
+  }
+  return "var(--danger)";
+}
+
 function formatNumber(value: number): string {
   return numberFormatter.format(Math.round(value));
 }
@@ -712,5 +747,27 @@ function initialFloatingStyle(pos?: { left: number; top: number }): string {
     return ""; // 使用默认右上角
   }
   return `left:${Math.round(pos.left)}px;top:${Math.round(pos.top)}px;right:auto;`;
+}
+
+function alignFloatingContainer(container: HTMLElement): void {
+  const app = document.getElementById("app");
+  if (!app) {
+    return;
+  }
+  const rect = app.getBoundingClientRect();
+  const offsetRight = Math.max(12, window.innerWidth - rect.right + 24);
+  container.style.left = "auto";
+  container.style.right = `${Math.round(offsetRight)}px`;
+  container.style.top = "12px";
+}
+
+function handleResizeForFloating(): void {
+  if (state.floatingPos) {
+    return;
+  }
+  const container = document.querySelector<HTMLElement>("[data-role='floating-time']");
+  if (container) {
+    alignFloatingContainer(container);
+  }
 }
 
