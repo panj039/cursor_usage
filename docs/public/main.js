@@ -216,11 +216,21 @@
     return `
     <section class="panel file-panel">
       <div class="file-panel__actions">
-        <label class="file-input">
-          <span class="file-input__label">\u9009\u62E9 CSV \u6587\u4EF6</span>
-          <input data-role="file-input" type="file" accept=".csv,text/csv" hidden />
-        </label>
-        ${model.fileName ? `<span class="file-panel__filename">\u5F53\u524D\u6587\u4EF6\uFF1A${escapeHtml(model.fileName)}</span>` : ""}
+        <div class="file-panel__left">
+          <label class="file-input">
+            <span class="file-input__label">\u9009\u62E9 CSV \u6587\u4EF6</span>
+            <input data-role="file-input" type="file" accept=".csv,text/csv" hidden />
+          </label>
+          ${model.fileName ? `<span class="file-panel__filename">\u5F53\u524D\u6587\u4EF6\uFF1A${escapeHtml(model.fileName)}</span>` : ""}
+        </div>
+        <a
+          class="file-panel__link"
+          href="https://cursor.com/cn/dashboard?tab=usage"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          \u4E0B\u8F7D\u7528\u91CF CSV
+        </a>
       </div>
       <div class="drop-zone" data-role="drop-zone">
         <p>\u5C06\u6587\u4EF6\u62D6\u62FD\u5230\u6B64\u5904\u6216\u70B9\u51FB\u4E0A\u65B9\u6309\u94AE</p>
@@ -231,6 +241,14 @@
     <section class="panel plan-panel">
       <header class="panel__header">
         <h2>\u5957\u9910\u6A21\u5F0F</h2>
+        <a
+          class="panel__link"
+          href="https://cursor.com/cn/dashboard?tab=billing"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          \u67E5\u770B\u8D26\u5355\u8D39\u7528
+        </a>
       </header>
       <div class="plan-panel__content">
         <div class="plan-options">

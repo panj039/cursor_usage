@@ -96,10 +96,17 @@ body {
 
 .file-panel__actions {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.file-panel__left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .file-input {
@@ -122,6 +129,17 @@ body {
 
 .file-panel__filename {
   color: var(--text-secondary);
+}
+
+.file-panel__link {
+  color: var(--accent);
+  font-size: 14px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.file-panel__link:hover {
+  opacity: 0.75;
 }
 
 .drop-zone {
@@ -260,6 +278,17 @@ body {
   font-size: 12px;
   line-height: 1.4;
   color: var(--text-secondary);
+}
+
+.panel__link {
+  color: var(--accent);
+  font-size: 14px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.panel__link:hover {
+  opacity: 0.75;
 }
 
 .value-cell {

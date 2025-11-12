@@ -71,11 +71,21 @@ export function renderApp(model: RenderModel): string {
   return `
     <section class="panel file-panel">
       <div class="file-panel__actions">
-        <label class="file-input">
-          <span class="file-input__label">选择 CSV 文件</span>
-          <input data-role="file-input" type="file" accept=".csv,text/csv" hidden />
-        </label>
-        ${model.fileName ? `<span class="file-panel__filename">当前文件：${escapeHtml(model.fileName)}</span>` : ""}
+        <div class="file-panel__left">
+          <label class="file-input">
+            <span class="file-input__label">选择 CSV 文件</span>
+            <input data-role="file-input" type="file" accept=".csv,text/csv" hidden />
+          </label>
+          ${model.fileName ? `<span class="file-panel__filename">当前文件：${escapeHtml(model.fileName)}</span>` : ""}
+        </div>
+        <a
+          class="file-panel__link"
+          href="https://cursor.com/cn/dashboard?tab=usage"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          下载用量 CSV
+        </a>
       </div>
       <div class="drop-zone" data-role="drop-zone">
         <p>将文件拖拽到此处或点击上方按钮</p>
@@ -86,6 +96,14 @@ export function renderApp(model: RenderModel): string {
     <section class="panel plan-panel">
       <header class="panel__header">
         <h2>套餐模式</h2>
+        <a
+          class="panel__link"
+          href="https://cursor.com/cn/dashboard?tab=billing"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          查看账单费用
+        </a>
       </header>
       <div class="plan-panel__content">
         <div class="plan-options">
