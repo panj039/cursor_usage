@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Build artifacts
+dist/
+public/main.js
+public/main.js.map
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Temp
+tmp/
+
