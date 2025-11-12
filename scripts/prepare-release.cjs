@@ -18,16 +18,19 @@ function copyFile(srcRelative, destRelative) {
     throw new Error(`缺少文件：${srcRelative}，请先运行 npm run build`);
   }
   const dest = path.join(distDir, destRelative);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
 }
 
 function copyStatic() {
   copyFile("index.html", "index.html");
   copyFile("styles.css", "styles.css");
-  copyFile(path.join("public", "main.js"), "main.js");
+  copyFile(path.join("public", "main.js"), path.join("public", "main.js"));
   const sourceMap = path.join(publicDir, "main.js.map");
   if (fs.existsSync(sourceMap)) {
-    fs.copyFileSync(sourceMap, path.join(distDir, "main.js.map"));
+    const dest = path.join(distDir, "public", "main.js.map");
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(sourceMap, dest);
   }
 }
 
