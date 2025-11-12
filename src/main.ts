@@ -52,6 +52,9 @@ const PLAN_CONFIG = {
   },
 } as const;
 
+const PLAN_USAGE_NOTE =
+  "套餐用量仅供参考，实际限额与服务状态以 Cursor 账户提示为准，软阈值可能允许继续使用并按政策计费。";
+
 const numberFormatter = new Intl.NumberFormat("zh-CN");
 const costFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -411,6 +414,7 @@ function render(): void {
     activePlan: state.plan,
     planUsagePercent: percent,
     planUsageLabel: percentLabel,
+    planUsageNote: PLAN_USAGE_NOTE,
     planUsageColor: usageColor(percent),
     planUsageSummary: `${planConfig.label} 套餐已使用 ${formatNumber(summary.totalTokens)} tokens，占比 ${percentLabel}`,
     planTokensSummary: `${formatNumber(summary.totalTokens)} / ${formatNumber(planConfig.tokenLimit)} tokens`,

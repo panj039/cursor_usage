@@ -248,6 +248,7 @@
           <div class="plan-usage__details">
             <p>${escapeHtml(model.planUsageSummary)}</p>
             <p class="plan-usage__tokens">${escapeHtml(model.planTokensSummary)}</p>
+            <p class="plan-usage__note">${escapeHtml(model.planUsageNote)}</p>
           </div>
         </div>
       </div>
@@ -405,6 +406,7 @@
           tokenLimit: 1e8
         }
       };
+      var PLAN_USAGE_NOTE = "\u5957\u9910\u7528\u91CF\u4EC5\u4F9B\u53C2\u8003\uFF0C\u5B9E\u9645\u9650\u989D\u4E0E\u670D\u52A1\u72B6\u6001\u4EE5 Cursor \u8D26\u6237\u63D0\u793A\u4E3A\u51C6\uFF0C\u8F6F\u9608\u503C\u53EF\u80FD\u5141\u8BB8\u7EE7\u7EED\u4F7F\u7528\u5E76\u6309\u653F\u7B56\u8BA1\u8D39\u3002";
       var numberFormatter = new Intl.NumberFormat("zh-CN");
       var costFormatter = new Intl.NumberFormat("en-US", {
         style: "currency",
@@ -713,6 +715,7 @@
           activePlan: state.plan,
           planUsagePercent: percent,
           planUsageLabel: percentLabel,
+          planUsageNote: PLAN_USAGE_NOTE,
           planUsageColor: usageColor(percent),
           planUsageSummary: `${planConfig.label} \u5957\u9910\u5DF2\u4F7F\u7528 ${formatNumber(summary.totalTokens)} tokens\uFF0C\u5360\u6BD4 ${percentLabel}`,
           planTokensSummary: `${formatNumber(summary.totalTokens)} / ${formatNumber(planConfig.tokenLimit)} tokens`,

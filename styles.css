@@ -255,6 +255,13 @@ body {
   font-weight: 500;
 }
 
+.plan-usage__note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
 .filter-panel__content {
   display: flex;
   flex-direction: column;

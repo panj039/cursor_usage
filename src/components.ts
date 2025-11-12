@@ -48,6 +48,7 @@ export interface RenderModel {
   planUsageLabel: string;
   planUsageSummary: string;
   planTokensSummary: string;
+  planUsageNote: string;
   planUsageColor: string;
   stats: StatCard[];
   quickRanges: QuickRangeView;
@@ -96,6 +97,7 @@ export function renderApp(model: RenderModel): string {
           <div class="plan-usage__details">
             <p>${escapeHtml(model.planUsageSummary)}</p>
             <p class="plan-usage__tokens">${escapeHtml(model.planTokensSummary)}</p>
+            <p class="plan-usage__note">${escapeHtml(model.planUsageNote)}</p>
           </div>
         </div>
       </div>
