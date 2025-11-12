@@ -333,9 +333,9 @@
       (row) => `
                                 <tr>
                                   <td>${escapeHtml(row.label)}</td>
-                                  <td>${escapeHtml(row.requests)}</td>
-                                  <td>${escapeHtml(row.totalTokens)}</td>
-                                  <td>${escapeHtml(row.cost)}</td>
+                                  <td>${renderValueCell(row.requests, row.requestsPercentLabel, row.requestsPercentValue)}</td>
+                                  <td>${renderValueCell(row.totalTokens, row.tokensPercentLabel, row.tokensPercentValue)}</td>
+                                  <td>${renderValueCell(row.cost, row.costPercentLabel, row.costPercentValue)}</td>
                                 </tr>
                               `
     ).join("") : `<tr><td colspan="4" class="panel__empty">\u5F53\u524D\u7B5B\u9009\u4E0B\u6682\u65E0\u6570\u636E</td></tr>`}
@@ -367,6 +367,19 @@
       <p class="stat-card__value">${escapeHtml(stat.value)}</p>
       ${stat.hint ? `<p class="stat-card__hint">${escapeHtml(stat.hint)}</p>` : ""}
     </article>
+  `;
+  }
+  function renderValueCell(value, percentLabel, percentValue) {
+    return `
+    <div class="value-cell">
+      <div class="value-cell__meta">
+        <span class="value-cell__value">${escapeHtml(value)}</span>
+        <span class="value-cell__percent">${escapeHtml(percentLabel)}</span>
+      </div>
+      <div class="value-cell__bar">
+        <span style="width:${percentValue.toFixed(2)}%"></span>
+      </div>
+    </div>
   `;
   }
   function escapeHtml(value) {
@@ -774,6 +787,9 @@
             });
           }
         });
+        const totalRequests = records.length;
+        const totalTokens = totals.totalTokens;
+        const totalCost = totals.totalCost;
         const stats = [
           {
             label: "\u603B\u8C03\u7528\u6B21\u6570",
@@ -809,14 +825,21 @@
           key,
           label: key,
           requests: formatNumber(entry.requests),
+          requestsPercentLabel: formatPercentDisplay(totalRequests ? entry.requests / totalRequests * 100 : 0),
+          requestsPercentValue: totalRequests ? entry.requests / totalRequests * 100 : 0,
           totalTokens: formatNumber(entry.tokens),
-          cost: formatCost(entry.cost)
+          tokensPercentLabel: formatPercentDisplay(totalTokens ? entry.tokens / totalTokens * 100 : 0),
+          tokensPercentValue: totalTokens ? entry.tokens / totalTokens * 100 : 0,
+          cost: formatCost(entry.cost),
+          costPercentLabel: formatPercentDisplay(totalCost ? entry.cost / totalCost * 100 : 0),
+          costPercentValue: totalCost ? entry.cost / totalCost * 100 : 0
         })).sort((a, b) => a.key > b.key ? -1 : 1);
         return {
           stats,
           dailyRows,
-          totalTokens: totals.totalTokens,
-          totalCost: totals.totalCost
+          totalTokens,
+          totalCost,
+          totalRequests
         };
       }
       function toPlanOptions() {
@@ -951,6 +974,16 @@
           return "#facc15";
         }
         return "var(--danger)";
+      }
+      function formatPercentDisplay(value) {
+        if (value <= 0) {
+          return "0%";
+        }
+        if (value >= 100) {
+          return "100%";
+        }
+        const rounded = Math.round(value * 10) / 10;
+        return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
       }
       function formatNumber(value) {
         return numberFormatter.format(Math.round(value));

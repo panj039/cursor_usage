@@ -15,9 +15,15 @@ export interface StatCard {
 export interface DailyRow {
   key: string;
   label: string;
-  totalTokens: string;
   requests: string;
+  requestsPercentLabel: string;
+  requestsPercentValue: number;
+  totalTokens: string;
+  tokensPercentLabel: string;
+  tokensPercentValue: number;
   cost: string;
+  costPercentLabel: string;
+  costPercentValue: number;
 }
 
 export interface FilterValues {
@@ -194,9 +200,9 @@ export function renderApp(model: RenderModel): string {
                               (row) => `
                                 <tr>
                                   <td>${escapeHtml(row.label)}</td>
-                                  <td>${escapeHtml(row.requests)}</td>
-                                  <td>${escapeHtml(row.totalTokens)}</td>
-                                  <td>${escapeHtml(row.cost)}</td>
+                                  <td>${renderValueCell(row.requests, row.requestsPercentLabel, row.requestsPercentValue)}</td>
+                                  <td>${renderValueCell(row.totalTokens, row.tokensPercentLabel, row.tokensPercentValue)}</td>
+                                  <td>${renderValueCell(row.cost, row.costPercentLabel, row.costPercentValue)}</td>
                                 </tr>
                               `,
                             )
@@ -248,6 +254,20 @@ function renderStatCard(stat: StatCard): string {
       <p class="stat-card__value">${escapeHtml(stat.value)}</p>
       ${stat.hint ? `<p class="stat-card__hint">${escapeHtml(stat.hint)}</p>` : ""}
     </article>
+  `;
+}
+
+function renderValueCell(value: string, percentLabel: string, percentValue: number): string {
+  return `
+    <div class="value-cell">
+      <div class="value-cell__meta">
+        <span class="value-cell__value">${escapeHtml(value)}</span>
+        <span class="value-cell__percent">${escapeHtml(percentLabel)}</span>
+      </div>
+      <div class="value-cell__bar">
+        <span style="width:${percentValue.toFixed(2)}%"></span>
+      </div>
+    </div>
   `;
 }
 

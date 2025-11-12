@@ -27,6 +27,7 @@ interface SummaryResult {
   dailyRows: DailyRow[];
   totalTokens: number;
   totalCost: number;
+  totalRequests: number;
 }
 
 const PLAN_CONFIG = {
@@ -479,6 +480,10 @@ function summarize(records: UsageRecord[]): SummaryResult {
     }
   });
 
+  const totalRequests = records.length;
+  const totalTokens = totals.totalTokens;
+  const totalCost = totals.totalCost;
+
   const stats: StatCard[] = [
     {
       label: "总调用次数",
@@ -516,16 +521,23 @@ function summarize(records: UsageRecord[]): SummaryResult {
       key,
       label: key,
       requests: formatNumber(entry.requests),
+      requestsPercentLabel: formatPercentDisplay(totalRequests ? (entry.requests / totalRequests) * 100 : 0),
+      requestsPercentValue: totalRequests ? (entry.requests / totalRequests) * 100 : 0,
       totalTokens: formatNumber(entry.tokens),
+      tokensPercentLabel: formatPercentDisplay(totalTokens ? (entry.tokens / totalTokens) * 100 : 0),
+      tokensPercentValue: totalTokens ? (entry.tokens / totalTokens) * 100 : 0,
       cost: formatCost(entry.cost),
+      costPercentLabel: formatPercentDisplay(totalCost ? (entry.cost / totalCost) * 100 : 0),
+      costPercentValue: totalCost ? (entry.cost / totalCost) * 100 : 0,
     }))
     .sort((a, b) => (a.key > b.key ? -1 : 1));
 
   return {
     stats,
     dailyRows,
-    totalTokens: totals.totalTokens,
-    totalCost: totals.totalCost,
+    totalTokens,
+    totalCost,
+    totalRequests,
   };
 }
 
@@ -674,6 +686,17 @@ function usageColor(percent: number): string {
     return "#facc15";
   }
   return "var(--danger)";
+}
+
+function formatPercentDisplay(value: number): string {
+  if (value <= 0) {
+    return "0%";
+  }
+  if (value >= 100) {
+    return "100%";
+  }
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
 function formatNumber(value: number): string {

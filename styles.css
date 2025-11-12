@@ -262,6 +262,44 @@ body {
   color: var(--text-secondary);
 }
 
+.value-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.value-cell__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.value-cell__bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.24);
+  overflow: hidden;
+}
+
+.value-cell__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+}
+
+.value-cell__value {
+  font-weight: 600;
+}
+
+.value-cell__percent {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 .filter-panel__content {
   display: flex;
   flex-direction: column;
