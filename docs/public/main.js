@@ -272,6 +272,19 @@
       </div>
     </section>
 
+    <section class="panel model-panel">
+      <header class="panel__header">
+        <h2>\u6A21\u578B\u7B5B\u9009</h2>
+        ${model.hasModelOptions ? `<button class="link-button" data-action="model-all">\u5168\u9009</button>` : ""}
+      </header>
+      ${model.hasModelOptions ? `
+              <div class="model-panel__chips">
+                ${model.modelChips.map((chip) => renderModelChip(chip)).join("")}
+              </div>
+            ` : `<p class="panel__hint">\u5BFC\u5165 CSV \u540E\u53EF\u6309\u7167\u6A21\u578B\u7B5B\u9009\u3002</p>`}
+      ${model.hasModelData ? renderModelChart(model.modelChartMetrics, model.modelLegend) : model.hasModelOptions ? `<p class="panel__empty">\u5F53\u524D\u7B5B\u9009\u6761\u4EF6\u4E0B\u6682\u65E0\u6A21\u578B\u6570\u636E\u3002</p>` : ""}
+    </section>
+
     <div class="floating-time" data-role="floating-time" style="${model.floatingStyle}">
       <div class="time-toolbar">
         <button class="time-badge" data-action="toggle-range" aria-expanded="${model.showRangePopover ? "true" : "false"}" title="Shift+\u62D6\u52A8\u53EF\u79FB\u52A8\u4F4D\u7F6E">
@@ -400,6 +413,70 @@
     </div>
   `;
   }
+  function renderModelChip(chip) {
+    const classes = `model-chip${chip.active ? " model-chip--active" : ""}`;
+    return `
+    <button
+      class="${classes}"
+      data-action="model-toggle"
+      data-model="${escapeHtml(chip.value)}"
+      type="button"
+    >
+      <span class="model-chip__dot" style="--dot-color:${chip.color}"></span>
+      <span class="model-chip__label">${escapeHtml(chip.label)}</span>
+    </button>
+  `;
+  }
+  function renderModelChart(metrics, legend) {
+    return `
+    <div class="model-chart">
+      <div class="model-chart__legend">
+        ${legend.map((item) => renderLegendItem(item)).join("")}
+      </div>
+      <div class="model-chart__row">
+        ${metrics.map((metric) => renderModelChartMetric(metric)).join("")}
+      </div>
+    </div>
+  `;
+  }
+  function renderModelChartMetric(metric) {
+    return `
+    <section class="model-chart__card">
+      <header class="model-chart__card-header">
+        <span>${escapeHtml(metric.label)}</span>
+        <span class="model-chart__metric-total">${escapeHtml(metric.totalLabel)}</span>
+      </header>
+      ${metric.empty ? `<div class="model-chart__card-empty">\u6682\u65E0\u6570\u636E</div>` : `
+            <div class="model-chart__card-body">
+              <div class="model-chart__pie" style="--pie-gradient:${metric.gradient}">
+                <span class="model-chart__pie-total">${escapeHtml(metric.totalLabel)}</span>
+              </div>
+              <div class="model-chart__segment-list">
+                ${metric.segments.map(
+      (segment) => `
+                      <div class="model-chart__segment-row">
+                        <span class="model-chart__segment-dot" style="--segment-color:${segment.color}"></span>
+                        <span class="model-chart__segment-text">
+                          <span class="model-chart__segment-label">${escapeHtml(segment.label)}</span>
+                          <span class="model-chart__segment-meta">${escapeHtml(segment.valueLabel)} \xB7 ${escapeHtml(segment.percentLabel)}</span>
+                        </span>
+                      </div>
+                    `
+    ).join("")}
+              </div>
+            </div>
+          `}
+    </section>
+  `;
+  }
+  function renderLegendItem(item) {
+    return `
+    <span class="model-chart__legend-item">
+      <span class="model-chart__legend-dot" style="--dot-color:${item.color}"></span>
+      <span>${escapeHtml(item.label)}</span>
+    </span>
+  `;
+  }
   function escapeHtml(value) {
     return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
@@ -451,12 +528,15 @@
         plan: "pro",
         activeQuickRangeKey: void 0,
         fileName: void 0,
-        rangePopoverOpen: false
+        rangePopoverOpen: false,
+        models: [],
+        selectedModels: []
       };
-      var root = document.querySelector("[data-view-root]");
-      if (!root) {
+      var rootQuery = document.querySelector("[data-view-root]");
+      if (!rootQuery) {
         throw new Error("\u65E0\u6CD5\u627E\u5230\u5E94\u7528\u5BB9\u5668");
       }
+      var root = rootQuery;
       init();
       function init() {
         bindGlobalDragGuards();
@@ -505,6 +585,18 @@
             event.preventDefault();
             state.rangePopoverOpen = !state.rangePopoverOpen;
             render();
+            return;
+          }
+          const modelToggle = target.closest("[data-action='model-toggle']");
+          if (modelToggle?.dataset.model) {
+            event.preventDefault();
+            handleModelToggle(modelToggle.dataset.model);
+            return;
+          }
+          const modelAll = target.closest("[data-action='model-all']");
+          if (modelAll) {
+            event.preventDefault();
+            handleModelSelectAll();
             return;
           }
           const preset = target.closest("[data-action='preset']");
@@ -659,6 +751,9 @@
           state.fileName = file.name;
           state.activeQuickRangeKey = void 0;
           state.filter = {};
+          state.models = collectModels(records);
+          state.selectedModels = defaultSelectedModels(state.models);
+          state.rangePopoverOpen = false;
           render();
         }).catch((error) => {
           console.error("\u89E3\u6790 CSV \u65F6\u51FA\u9519\uFF1A", error);
@@ -671,6 +766,33 @@
         }
         state.plan = plan;
         state.rangePopoverOpen = false;
+        render();
+      }
+      function handleModelToggle(model) {
+        if (!model) {
+          return;
+        }
+        if (!state.models.length) {
+          return;
+        }
+        const baseline = state.selectedModels.length ? state.selectedModels : state.models;
+        const selection = new Set(baseline);
+        if (selection.has(model)) {
+          selection.delete(model);
+        } else {
+          selection.add(model);
+        }
+        if (selection.size === 0) {
+          selection.add(model);
+        }
+        state.selectedModels = Array.from(selection);
+        render();
+      }
+      function handleModelSelectAll() {
+        if (!state.models.length) {
+          return;
+        }
+        state.selectedModels = [...state.models];
         render();
       }
       function handleQuickRange(rangeKey) {
@@ -732,8 +854,15 @@
       function render() {
         const dateRange = normalizeRange(toDateRange(state.filter));
         const planConfig = PLAN_CONFIG[state.plan];
-        const filteredRecords = applyDateRange(state.records, dateRange);
+        const dateFiltered = applyDateRange(state.records, dateRange);
+        const modelsAll = state.models;
+        const selectedModels = state.selectedModels.length ? state.selectedModels : modelsAll;
+        const modelColors = buildModelColorMap(modelsAll);
+        const filteredRecords = applyModelFilter(dateFiltered, selectedModels.length ? selectedModels : modelsAll);
         const summary = summarize(filteredRecords);
+        const modelLegend = buildModelLegend(summary.modelMetrics, modelColors);
+        const modelChartMetrics = buildModelChartMetrics(summary, modelColors);
+        const modelChips = buildModelChips(modelsAll, selectedModels, modelColors);
         const quickRanges = buildQuickRanges(state.records);
         const percent = computeUsagePercent(summary.totalTokens, planConfig.tokenLimit);
         const percentLabel = formatPercentLabel(percent);
@@ -758,7 +887,12 @@
           floatingStyle: initialFloatingStyle(state.floatingPos),
           dailyRows: summary.dailyRows,
           quickRangesAvailable: state.records.length > 0,
-          activeQuickRangeKey: state.activeQuickRangeKey
+          activeQuickRangeKey: state.activeQuickRangeKey,
+          modelChips,
+          hasModelOptions: modelsAll.length > 0,
+          hasModelData: summary.modelMetrics.length > 0,
+          modelChartMetrics,
+          modelLegend
         };
         root.innerHTML = renderApp(renderModel);
         if (state.rangePopoverOpen) {
@@ -852,12 +986,14 @@
           costPercentLabel: formatPercentDisplay(totalCost ? entry.cost / totalCost * 100 : 0),
           costPercentValue: totalCost ? entry.cost / totalCost * 100 : 0
         })).sort((a, b) => a.key > b.key ? -1 : 1);
+        const modelMetrics = buildModelMetrics(records);
         return {
           stats,
           dailyRows,
           totalTokens,
           totalCost,
-          totalRequests
+          totalRequests,
+          modelMetrics
         };
       }
       function toPlanOptions() {
@@ -974,6 +1110,174 @@
       }
       function toTimeInput(date) {
         return [pad2(date.getHours()), pad2(date.getMinutes())].join(":");
+      }
+      function collectModels(records) {
+        const seen = /* @__PURE__ */ new Set();
+        records.forEach((record) => {
+          seen.add(record.model ?? "");
+        });
+        return Array.from(seen).sort(
+          (a, b) => formatModelLabel(a).localeCompare(formatModelLabel(b), "zh-CN")
+        );
+      }
+      function applyModelFilter(records, selected) {
+        if (!selected.length) {
+          return records;
+        }
+        const selectedSet = new Set(selected);
+        return records.filter((record) => selectedSet.has(record.model ?? ""));
+      }
+      function buildModelMetrics(records) {
+        const byModel = /* @__PURE__ */ new Map();
+        records.forEach((record) => {
+          const key = record.model ?? "";
+          const entry = byModel.get(key);
+          if (entry) {
+            entry.requests += 1;
+            entry.tokens += record.totalTokens;
+            entry.cost += record.cost;
+          } else {
+            byModel.set(key, {
+              requests: 1,
+              tokens: record.totalTokens,
+              cost: record.cost
+            });
+          }
+        });
+        return Array.from(byModel.entries()).map(([model, entry]) => ({
+          model,
+          requests: entry.requests,
+          tokens: entry.tokens,
+          cost: entry.cost
+        })).sort((a, b) => b.tokens - a.tokens);
+      }
+      function buildModelColorMap(models) {
+        const map = /* @__PURE__ */ new Map();
+        models.forEach((model, index) => {
+          map.set(model ?? "", generateModelColor(index));
+        });
+        return map;
+      }
+      function buildModelChips(models, selected, colorMap) {
+        if (!models.length) {
+          return [];
+        }
+        const baseline = selected.length ? selected : models;
+        const selectedSet = new Set(baseline);
+        return models.map((model) => ({
+          value: model,
+          label: formatModelLabel(model),
+          active: selectedSet.has(model),
+          color: getModelColor(model, colorMap)
+        }));
+      }
+      function buildModelLegend(metrics, colorMap) {
+        const unique = /* @__PURE__ */ new Map();
+        metrics.forEach((metric) => {
+          unique.set(metric.model, {
+            label: formatModelLabel(metric.model),
+            color: getModelColor(metric.model, colorMap)
+          });
+        });
+        return Array.from(unique.values());
+      }
+      function buildModelChartMetrics(summary, colorMap) {
+        const definitions = [
+          {
+            key: "requests",
+            label: "\u8C03\u7528\u6B21\u6570\u5360\u6BD4",
+            total: summary.totalRequests,
+            getter: (metric) => metric.requests,
+            formatter: (value) => formatNumber(value)
+          },
+          {
+            key: "tokens",
+            label: "Total Tokens \u5360\u6BD4",
+            total: summary.totalTokens,
+            getter: (metric) => metric.tokens,
+            formatter: (value) => formatNumber(value)
+          },
+          {
+            key: "cost",
+            label: "\u8D39\u7528\u5360\u6BD4 (USD)",
+            total: summary.totalCost,
+            getter: (metric) => metric.cost,
+            formatter: (value) => formatCost(value)
+          }
+        ];
+        return definitions.map((definition) => {
+          const { total, getter, formatter } = definition;
+          const segments = summary.modelMetrics.map((metric) => {
+            const rawValue = getter(metric);
+            const percentValue = total > 0 ? rawValue / total * 100 : 0;
+            return {
+              label: formatModelLabel(metric.model),
+              percentLabel: formatPercentDisplay(percentValue),
+              percentValue,
+              color: getModelColor(metric.model, colorMap),
+              valueLabel: formatter(rawValue)
+            };
+          }).filter((segment) => segment.percentValue > 0);
+          const gradient = buildPieGradient(segments);
+          return {
+            key: definition.key,
+            label: definition.label,
+            totalLabel: formatter(total),
+            empty: total === 0 || segments.length === 0,
+            segments,
+            gradient
+          };
+        });
+      }
+      function defaultSelectedModels(models) {
+        if (!models.length) {
+          return [];
+        }
+        const paidModels = models.filter(
+          (model) => model && model.trim().toLowerCase() !== "auto"
+        );
+        if (paidModels.length) {
+          return paidModels;
+        }
+        return [...models];
+      }
+      function getModelColor(model, colorMap) {
+        if (colorMap.has(model)) {
+          return colorMap.get(model);
+        }
+        return colorFromString(model);
+      }
+      function generateModelColor(index) {
+        const hue = index * 67 % 360;
+        return `hsl(${hue}, 70%, 60%)`;
+      }
+      function colorFromString(value) {
+        let hash = 0;
+        for (let i = 0; i < value.length; i += 1) {
+          hash = value.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = Math.abs(hash) % 360;
+        return `hsl(${hue}, 70%, 60%)`;
+      }
+      function formatModelLabel(model) {
+        return model ? model : "\u672A\u6807\u8BB0\u6A21\u578B";
+      }
+      function buildPieGradient(segments) {
+        if (!segments.length) {
+          return "conic-gradient(rgba(148, 163, 184, 0.35) 0 100%)";
+        }
+        let current = 0;
+        const parts = segments.map((segment, index) => {
+          const start = current;
+          let span = segment.percentValue;
+          if (index === segments.length - 1) {
+            span = 100 - start;
+          }
+          const end = Math.min(100, start + span);
+          current = end;
+          return `${segment.color} ${start}% ${end}%`;
+        });
+        return `conic-gradient(${parts.join(",")})`;
       }
       function formatPercentLabel(percent) {
         return `${Math.min(100, Math.round(percent))}%`;

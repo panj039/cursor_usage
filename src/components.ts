@@ -26,6 +26,35 @@ export interface DailyRow {
   costPercentValue: number;
 }
 
+export interface ModelChip {
+  value: string;
+  label: string;
+  active: boolean;
+  color: string;
+}
+
+export interface ModelChartSegment {
+  label: string;
+  percentLabel: string;
+  percentValue: number;
+  color: string;
+  valueLabel: string;
+}
+
+export interface ModelChartMetric {
+  key: string;
+  label: string;
+  totalLabel: string;
+  empty: boolean;
+  segments: ModelChartSegment[];
+  gradient: string;
+}
+
+export interface ModelLegendItem {
+  label: string;
+  color: string;
+}
+
 export interface FilterValues {
   startDate: string;
   startTime: string;
@@ -65,6 +94,11 @@ export interface RenderModel {
   quickRangesAvailable: boolean;
   activeQuickRangeKey?: string;
   floatingStyle: string;
+  modelChips: ModelChip[];
+  hasModelOptions: boolean;
+  hasModelData: boolean;
+  modelChartMetrics: ModelChartMetric[];
+  modelLegend: ModelLegendItem[];
 }
 
 export function renderApp(model: RenderModel): string {
@@ -125,6 +159,33 @@ export function renderApp(model: RenderModel): string {
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="panel model-panel">
+      <header class="panel__header">
+        <h2>模型筛选</h2>
+        ${
+          model.hasModelOptions
+            ? `<button class="link-button" data-action="model-all">全选</button>`
+            : ""
+        }
+      </header>
+      ${
+        model.hasModelOptions
+          ? `
+              <div class="model-panel__chips">
+                ${model.modelChips.map((chip) => renderModelChip(chip)).join("")}
+              </div>
+            `
+          : `<p class="panel__hint">导入 CSV 后可按照模型筛选。</p>`
+      }
+      ${
+        model.hasModelData
+          ? renderModelChart(model.modelChartMetrics, model.modelLegend)
+          : model.hasModelOptions
+            ? `<p class="panel__empty">当前筛选条件下暂无模型数据。</p>`
+            : ""
+      }
     </section>
 
     <div class="floating-time" data-role="floating-time" style="${model.floatingStyle}">
@@ -286,6 +347,80 @@ function renderValueCell(value: string, percentLabel: string, percentValue: numb
         <span style="width:${percentValue.toFixed(2)}%"></span>
       </div>
     </div>
+  `;
+}
+
+function renderModelChip(chip: ModelChip): string {
+  const classes = `model-chip${chip.active ? " model-chip--active" : ""}`;
+  return `
+    <button
+      class="${classes}"
+      data-action="model-toggle"
+      data-model="${escapeHtml(chip.value)}"
+      type="button"
+    >
+      <span class="model-chip__dot" style="--dot-color:${chip.color}"></span>
+      <span class="model-chip__label">${escapeHtml(chip.label)}</span>
+    </button>
+  `;
+}
+
+function renderModelChart(metrics: ModelChartMetric[], legend: ModelLegendItem[]): string {
+  return `
+    <div class="model-chart">
+      <div class="model-chart__legend">
+        ${legend.map((item) => renderLegendItem(item)).join("")}
+      </div>
+      <div class="model-chart__row">
+        ${metrics.map((metric) => renderModelChartMetric(metric)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderModelChartMetric(metric: ModelChartMetric): string {
+  return `
+    <section class="model-chart__card">
+      <header class="model-chart__card-header">
+        <span>${escapeHtml(metric.label)}</span>
+        <span class="model-chart__metric-total">${escapeHtml(metric.totalLabel)}</span>
+      </header>
+      ${
+        metric.empty
+          ? `<div class="model-chart__card-empty">暂无数据</div>`
+          : `
+            <div class="model-chart__card-body">
+              <div class="model-chart__pie" style="--pie-gradient:${metric.gradient}">
+                <span class="model-chart__pie-total">${escapeHtml(metric.totalLabel)}</span>
+              </div>
+              <div class="model-chart__segment-list">
+                ${metric.segments
+                  .map(
+                    (segment) => `
+                      <div class="model-chart__segment-row">
+                        <span class="model-chart__segment-dot" style="--segment-color:${segment.color}"></span>
+                        <span class="model-chart__segment-text">
+                          <span class="model-chart__segment-label">${escapeHtml(segment.label)}</span>
+                          <span class="model-chart__segment-meta">${escapeHtml(segment.valueLabel)} · ${escapeHtml(segment.percentLabel)}</span>
+                        </span>
+                      </div>
+                    `,
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `
+      }
+    </section>
+  `;
+}
+
+function renderLegendItem(item: ModelLegendItem): string {
+  return `
+    <span class="model-chart__legend-item">
+      <span class="model-chart__legend-dot" style="--dot-color:${item.color}"></span>
+      <span>${escapeHtml(item.label)}</span>
+    </span>
   `;
 }
 

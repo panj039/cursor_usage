@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+set -e
+
+npm run publish:docs
+
+if [ -d "docs" ]; then
+  git add docs
+fi

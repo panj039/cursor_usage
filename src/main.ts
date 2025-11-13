@@ -1,6 +1,15 @@
 import { readUsageFile, UsageRecord } from "./parser";
 import { applyDateRange, buildQuickRanges, DateRange, QuickRanges, normalizeRange } from "./filters";
-import { DailyRow, PlanOption, renderApp, StatCard } from "./components";
+import {
+  DailyRow,
+  ModelChartMetric,
+  ModelChartSegment,
+  ModelChip,
+  ModelLegendItem,
+  PlanOption,
+  renderApp,
+  StatCard,
+} from "./components";
 
 type PlanId = keyof typeof PLAN_CONFIG;
 
@@ -18,6 +27,8 @@ interface AppState {
   activeQuickRangeKey?: string;
   fileName?: string;
   rangePopoverOpen: boolean;
+  models: string[];
+  selectedModels: string[];
   floatingPos?: { left: number; top: number };
   dragging?: { offsetX: number; offsetY: number };
 }
@@ -28,6 +39,14 @@ interface SummaryResult {
   totalTokens: number;
   totalCost: number;
   totalRequests: number;
+  modelMetrics: ModelMetric[];
+}
+
+interface ModelMetric {
+  model: string;
+  requests: number;
+  tokens: number;
+  cost: number;
 }
 
 const PLAN_CONFIG = {
@@ -71,13 +90,17 @@ const state: AppState = {
   activeQuickRangeKey: undefined,
   fileName: undefined,
   rangePopoverOpen: false,
+  models: [],
+  selectedModels: [],
 };
 
-const root = document.querySelector<HTMLElement>("[data-view-root]");
+const rootQuery = document.querySelector<HTMLElement>("[data-view-root]");
 
-if (!root) {
+if (!rootQuery) {
   throw new Error("无法找到应用容器");
 }
+
+const root: HTMLElement = rootQuery;
 
 init();
 
@@ -135,6 +158,20 @@ function bindDelegatedEvents(): void {
       event.preventDefault();
       state.rangePopoverOpen = !state.rangePopoverOpen;
       render();
+      return;
+    }
+
+    const modelToggle = target.closest<HTMLElement>("[data-action='model-toggle']");
+    if (modelToggle?.dataset.model) {
+      event.preventDefault();
+      handleModelToggle(modelToggle.dataset.model);
+      return;
+    }
+
+    const modelAll = target.closest<HTMLElement>("[data-action='model-all']");
+    if (modelAll) {
+      event.preventDefault();
+      handleModelSelectAll();
       return;
     }
 
@@ -313,6 +350,9 @@ function handleFiles(files: File[]): void {
       state.fileName = file.name;
       state.activeQuickRangeKey = undefined;
       state.filter = {};
+      state.models = collectModels(records);
+      state.selectedModels = defaultSelectedModels(state.models);
+      state.rangePopoverOpen = false;
       render();
     })
     .catch((error) => {
@@ -327,6 +367,35 @@ function handlePlanChange(plan: PlanId): void {
   }
   state.plan = plan;
   state.rangePopoverOpen = false;
+  render();
+}
+
+function handleModelToggle(model: string): void {
+  if (!model) {
+    return;
+  }
+  if (!state.models.length) {
+    return;
+  }
+  const baseline = state.selectedModels.length ? state.selectedModels : state.models;
+  const selection = new Set(baseline);
+  if (selection.has(model)) {
+    selection.delete(model);
+  } else {
+    selection.add(model);
+  }
+  if (selection.size === 0) {
+    selection.add(model);
+  }
+  state.selectedModels = Array.from(selection);
+  render();
+}
+
+function handleModelSelectAll(): void {
+  if (!state.models.length) {
+    return;
+  }
+  state.selectedModels = [...state.models];
   render();
 }
 
@@ -397,8 +466,15 @@ function hasFilter(filter: FilterInputs): boolean {
 function render(): void {
   const dateRange = normalizeRange(toDateRange(state.filter));
   const planConfig = PLAN_CONFIG[state.plan];
-  const filteredRecords = applyDateRange(state.records, dateRange);
+  const dateFiltered = applyDateRange(state.records, dateRange);
+  const modelsAll = state.models;
+  const selectedModels = state.selectedModels.length ? state.selectedModels : modelsAll;
+  const modelColors = buildModelColorMap(modelsAll);
+  const filteredRecords = applyModelFilter(dateFiltered, selectedModels.length ? selectedModels : modelsAll);
   const summary = summarize(filteredRecords);
+  const modelLegend = buildModelLegend(summary.modelMetrics, modelColors);
+  const modelChartMetrics = buildModelChartMetrics(summary, modelColors);
+  const modelChips = buildModelChips(modelsAll, selectedModels, modelColors);
   const quickRanges = buildQuickRanges(state.records);
 
   const percent = computeUsagePercent(summary.totalTokens, planConfig.tokenLimit);
@@ -428,6 +504,11 @@ function render(): void {
     dailyRows: summary.dailyRows,
     quickRangesAvailable: state.records.length > 0,
     activeQuickRangeKey: state.activeQuickRangeKey,
+    modelChips,
+    hasModelOptions: modelsAll.length > 0,
+    hasModelData: summary.modelMetrics.length > 0,
+    modelChartMetrics,
+    modelLegend,
   };
 
   root.innerHTML = renderApp(renderModel);
@@ -478,6 +559,7 @@ function summarize(records: UsageRecord[]): SummaryResult {
         cost: record.cost,
       });
     }
+
   });
 
   const totalRequests = records.length;
@@ -532,12 +614,15 @@ function summarize(records: UsageRecord[]): SummaryResult {
     }))
     .sort((a, b) => (a.key > b.key ? -1 : 1));
 
+  const modelMetrics = buildModelMetrics(records);
+
   return {
     stats,
     dailyRows,
     totalTokens,
     totalCost,
     totalRequests,
+    modelMetrics,
   };
 }
 
@@ -665,6 +750,207 @@ function toDateInput(date: Date): string {
 
 function toTimeInput(date: Date): string {
   return [pad(date.getHours()), pad(date.getMinutes())].join(":");
+}
+
+function collectModels(records: UsageRecord[]): string[] {
+  const seen = new Set<string>();
+  records.forEach((record) => {
+    seen.add(record.model ?? "");
+  });
+  return Array.from(seen).sort((a, b) =>
+    formatModelLabel(a).localeCompare(formatModelLabel(b), "zh-CN"),
+  );
+}
+
+function applyModelFilter(records: UsageRecord[], selected: string[]): UsageRecord[] {
+  if (!selected.length) {
+    return records;
+  }
+  const selectedSet = new Set(selected);
+  return records.filter((record) => selectedSet.has(record.model ?? ""));
+}
+
+function buildModelMetrics(records: UsageRecord[]): ModelMetric[] {
+  const byModel = new Map<string, { requests: number; tokens: number; cost: number }>();
+  records.forEach((record) => {
+    const key = record.model ?? "";
+    const entry = byModel.get(key);
+    if (entry) {
+      entry.requests += 1;
+      entry.tokens += record.totalTokens;
+      entry.cost += record.cost;
+    } else {
+      byModel.set(key, {
+        requests: 1,
+        tokens: record.totalTokens,
+        cost: record.cost,
+      });
+    }
+  });
+  return Array.from(byModel.entries())
+    .map(([model, entry]) => ({
+      model,
+      requests: entry.requests,
+      tokens: entry.tokens,
+      cost: entry.cost,
+    }))
+    .sort((a, b) => b.tokens - a.tokens);
+}
+
+function buildModelColorMap(models: string[]): Map<string, string> {
+  const map = new Map<string, string>();
+  models.forEach((model, index) => {
+    map.set(model ?? "", generateModelColor(index));
+  });
+  return map;
+}
+
+function buildModelChips(
+  models: string[],
+  selected: string[],
+  colorMap: Map<string, string>,
+): ModelChip[] {
+  if (!models.length) {
+    return [];
+  }
+  const baseline = selected.length ? selected : models;
+  const selectedSet = new Set(baseline);
+  return models.map((model) => ({
+    value: model,
+    label: formatModelLabel(model),
+    active: selectedSet.has(model),
+    color: getModelColor(model, colorMap),
+  }));
+}
+
+function buildModelLegend(metrics: ModelMetric[], colorMap: Map<string, string>): ModelLegendItem[] {
+  const unique = new Map<string, ModelLegendItem>();
+  metrics.forEach((metric) => {
+    unique.set(metric.model, {
+      label: formatModelLabel(metric.model),
+      color: getModelColor(metric.model, colorMap),
+    });
+  });
+  return Array.from(unique.values());
+}
+
+function buildModelChartMetrics(
+  summary: SummaryResult,
+  colorMap: Map<string, string>,
+): ModelChartMetric[] {
+  const definitions: Array<{
+    key: string;
+    label: string;
+    total: number;
+    getter: (metric: ModelMetric) => number;
+    formatter: (value: number) => string;
+  }> = [
+    {
+      key: "requests",
+      label: "调用次数占比",
+      total: summary.totalRequests,
+      getter: (metric) => metric.requests,
+      formatter: (value) => formatNumber(value),
+    },
+    {
+      key: "tokens",
+      label: "Total Tokens 占比",
+      total: summary.totalTokens,
+      getter: (metric) => metric.tokens,
+      formatter: (value) => formatNumber(value),
+    },
+    {
+      key: "cost",
+      label: "费用占比 (USD)",
+      total: summary.totalCost,
+      getter: (metric) => metric.cost,
+      formatter: (value) => formatCost(value),
+    },
+  ];
+
+  return definitions.map((definition) => {
+    const { total, getter, formatter } = definition;
+    const segments = summary.modelMetrics
+      .map((metric) => {
+        const rawValue = getter(metric);
+        const percentValue = total > 0 ? (rawValue / total) * 100 : 0;
+        return {
+          label: formatModelLabel(metric.model),
+          percentLabel: formatPercentDisplay(percentValue),
+          percentValue,
+          color: getModelColor(metric.model, colorMap),
+          valueLabel: formatter(rawValue),
+        };
+      })
+      .filter((segment) => segment.percentValue > 0);
+
+    const gradient = buildPieGradient(segments);
+
+    return {
+      key: definition.key,
+      label: definition.label,
+      totalLabel: formatter(total),
+      empty: total === 0 || segments.length === 0,
+      segments,
+      gradient,
+    };
+  });
+}
+
+function defaultSelectedModels(models: string[]): string[] {
+  if (!models.length) {
+    return [];
+  }
+  const paidModels = models.filter(
+    (model) => model && model.trim().toLowerCase() !== "auto",
+  );
+  if (paidModels.length) {
+    return paidModels;
+  }
+  return [...models];
+}
+
+function getModelColor(model: string, colorMap: Map<string, string>): string {
+  if (colorMap.has(model)) {
+    return colorMap.get(model)!;
+  }
+  return colorFromString(model);
+}
+
+function generateModelColor(index: number): string {
+  const hue = (index * 67) % 360;
+  return `hsl(${hue}, 70%, 60%)`;
+}
+
+function colorFromString(value: string): string {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = value.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 70%, 60%)`;
+}
+
+function formatModelLabel(model: string): string {
+  return model ? model : "未标记模型";
+}
+
+function buildPieGradient(segments: ModelChartSegment[]): string {
+  if (!segments.length) {
+    return "conic-gradient(rgba(148, 163, 184, 0.35) 0 100%)";
+  }
+  let current = 0;
+  const parts = segments.map((segment, index) => {
+    const start = current;
+    let span = segment.percentValue;
+    if (index === segments.length - 1) {
+      span = 100 - start;
+    }
+    const end = Math.min(100, start + span);
+    current = end;
+    return `${segment.color} ${start}% ${end}%`;
+  });
+  return `conic-gradient(${parts.join(",")})`;
 }
 
 function formatPercentLabel(percent: number): string {
