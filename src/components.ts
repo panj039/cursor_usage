@@ -162,22 +162,23 @@ export function renderApp(model: RenderModel): string {
     </section>
 
     <section class="panel model-panel">
-      <header class="panel__header">
-        <h2>模型筛选</h2>
-        ${
-          model.hasModelOptions
-            ? `<button class="link-button" data-action="model-all">全选</button>`
-            : ""
-        }
-      </header>
       ${
         model.hasModelOptions
           ? `
-              <div class="model-panel__chips">
+            <div class="model-toolbar">
+              <h2>模型筛选</h2>
+              <div class="model-toolbar__chips">
                 ${model.modelChips.map((chip) => renderModelChip(chip)).join("")}
+                <button class="link-button model-toolbar__all" data-action="model-all">全选</button>
               </div>
-            `
-          : `<p class="panel__hint">导入 CSV 后可按照模型筛选。</p>`
+            </div>
+          `
+          : `
+            <header class="panel__header">
+              <h2>模型筛选</h2>
+            </header>
+            <p class="panel__hint">导入 CSV 后可按照模型筛选。</p>
+          `
       }
       ${
         model.hasModelData
@@ -368,9 +369,6 @@ function renderModelChip(chip: ModelChip): string {
 function renderModelChart(metrics: ModelChartMetric[], legend: ModelLegendItem[]): string {
   return `
     <div class="model-chart">
-      <div class="model-chart__legend">
-        ${legend.map((item) => renderLegendItem(item)).join("")}
-      </div>
       <div class="model-chart__row">
         ${metrics.map((metric) => renderModelChartMetric(metric)).join("")}
       </div>
@@ -412,15 +410,6 @@ function renderModelChartMetric(metric: ModelChartMetric): string {
           `
       }
     </section>
-  `;
-}
-
-function renderLegendItem(item: ModelLegendItem): string {
-  return `
-    <span class="model-chart__legend-item">
-      <span class="model-chart__legend-dot" style="--dot-color:${item.color}"></span>
-      <span>${escapeHtml(item.label)}</span>
-    </span>
   `;
 }
 

@@ -115,11 +115,29 @@ body {
   color: var(--text-secondary);
 }
 
-.model-panel__chips {
+.model-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 16px;
+}
+
+.model-toolbar h2 {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.model-toolbar__chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.model-toolbar__all {
+  white-space: nowrap;
 }
 
 .model-chip {
@@ -160,28 +178,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.model-chart__legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.model-chart__legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.model-chart__legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--dot-color, var(--accent));
-  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.2);
 }
 
 .model-chart__row {
@@ -815,6 +811,12 @@ tbody tr:hover {
 
   .subtitle-hint {
     white-space: normal;
+  }
+
+  .model-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 
   .model-chart__card-body {

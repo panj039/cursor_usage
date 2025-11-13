@@ -273,15 +273,20 @@
     </section>
 
     <section class="panel model-panel">
-      <header class="panel__header">
-        <h2>\u6A21\u578B\u7B5B\u9009</h2>
-        ${model.hasModelOptions ? `<button class="link-button" data-action="model-all">\u5168\u9009</button>` : ""}
-      </header>
       ${model.hasModelOptions ? `
-              <div class="model-panel__chips">
+            <div class="model-toolbar">
+              <h2>\u6A21\u578B\u7B5B\u9009</h2>
+              <div class="model-toolbar__chips">
                 ${model.modelChips.map((chip) => renderModelChip(chip)).join("")}
+                <button class="link-button model-toolbar__all" data-action="model-all">\u5168\u9009</button>
               </div>
-            ` : `<p class="panel__hint">\u5BFC\u5165 CSV \u540E\u53EF\u6309\u7167\u6A21\u578B\u7B5B\u9009\u3002</p>`}
+            </div>
+          ` : `
+            <header class="panel__header">
+              <h2>\u6A21\u578B\u7B5B\u9009</h2>
+            </header>
+            <p class="panel__hint">\u5BFC\u5165 CSV \u540E\u53EF\u6309\u7167\u6A21\u578B\u7B5B\u9009\u3002</p>
+          `}
       ${model.hasModelData ? renderModelChart(model.modelChartMetrics, model.modelLegend) : model.hasModelOptions ? `<p class="panel__empty">\u5F53\u524D\u7B5B\u9009\u6761\u4EF6\u4E0B\u6682\u65E0\u6A21\u578B\u6570\u636E\u3002</p>` : ""}
     </section>
 
@@ -430,9 +435,6 @@
   function renderModelChart(metrics, legend) {
     return `
     <div class="model-chart">
-      <div class="model-chart__legend">
-        ${legend.map((item) => renderLegendItem(item)).join("")}
-      </div>
       <div class="model-chart__row">
         ${metrics.map((metric) => renderModelChartMetric(metric)).join("")}
       </div>
@@ -467,14 +469,6 @@
             </div>
           `}
     </section>
-  `;
-  }
-  function renderLegendItem(item) {
-    return `
-    <span class="model-chart__legend-item">
-      <span class="model-chart__legend-dot" style="--dot-color:${item.color}"></span>
-      <span>${escapeHtml(item.label)}</span>
-    </span>
   `;
   }
   function escapeHtml(value) {
