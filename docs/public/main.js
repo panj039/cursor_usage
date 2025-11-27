@@ -490,22 +490,22 @@
         free: {
           label: "Free",
           description: "\u57FA\u7840\u7248\u672C\uFF0C\u9002\u7528\u4E8E\u65E5\u5E38\u8F7B\u91CF\u4F7F\u7528",
-          tokenLimit: 5e5
+          costLimit: 0
         },
         pro: {
           label: "Pro",
-          description: "\u4E13\u4E1A\u7248\uFF0C\u7EA6 1,000 \u4E07 tokens/\u6708",
-          tokenLimit: 1e7
+          description: "\u4E13\u4E1A\u7248\uFF0C$20/\u6708",
+          costLimit: 20
         },
         proPlus: {
           label: "ProPlus",
-          description: "\u8FDB\u9636\u7248\uFF0C\u7EA6 3,000 \u4E07 tokens/\u6708",
-          tokenLimit: 3e7
+          description: "\u8FDB\u9636\u7248\uFF0C$60/\u6708",
+          costLimit: 60
         },
         ultra: {
           label: "Ultra",
-          description: "\u65D7\u8230\u7248\uFF0C\u7EA6 1 \u4EBF tokens/\u6708",
-          tokenLimit: 1e8
+          description: "\u65D7\u8230\u7248\uFF0C$200/\u6708",
+          costLimit: 200
         }
       };
       var PLAN_USAGE_NOTE = "\u5957\u9910\u7528\u91CF\u4EC5\u4F9B\u53C2\u8003\uFF0C\u5B9E\u9645\u9650\u989D\u4E0E\u670D\u52A1\u72B6\u6001\u4EE5 Cursor \u8D26\u6237\u63D0\u793A\u4E3A\u51C6\uFF0C\u8F6F\u9608\u503C\u53EF\u80FD\u5141\u8BB8\u7EE7\u7EED\u4F7F\u7528\u5E76\u6309\u653F\u7B56\u8BA1\u8D39\u3002";
@@ -610,6 +610,16 @@
             event.preventDefault();
             clearFilters();
             return;
+          }
+        });
+        root.addEventListener("change", (event) => {
+          const input = event.target;
+          if (!input) {
+            return;
+          }
+          if (input.dataset.role === "file-input" && input.files?.length) {
+            handleFiles(Array.from(input.files));
+            input.value = "";
           }
         });
         root.addEventListener("input", (event) => {
@@ -858,7 +868,7 @@
         const modelChartMetrics = buildModelChartMetrics(summary, modelColors);
         const modelChips = buildModelChips(modelsAll, selectedModels, modelColors);
         const quickRanges = buildQuickRanges(state.records);
-        const percent = computeUsagePercent(summary.totalTokens, planConfig.tokenLimit);
+        const percent = computeUsagePercent(summary.totalCost, planConfig.costLimit);
         const percentLabel = formatPercentLabel(percent);
         const statusMessage = state.records.length ? "\u5F53\u524D\u7B5B\u9009\u6761\u4EF6\u4E0B\u6682\u65E0\u6570\u636E\uFF0C\u8BF7\u5C1D\u8BD5\u5176\u4ED6\u65F6\u95F4\u8303\u56F4\u3002" : "\u8BF7\u9009\u62E9\u6216\u62D6\u5165 CSV \u6587\u4EF6\u4EE5\u67E5\u770B\u7528\u91CF\u7EDF\u8BA1\u3002";
         const renderModel = {
@@ -871,8 +881,8 @@
           planUsageLabel: percentLabel,
           planUsageNote: PLAN_USAGE_NOTE,
           planUsageColor: usageColor(percent),
-          planUsageSummary: `${planConfig.label} \u5957\u9910\u5DF2\u4F7F\u7528 ${formatNumber(summary.totalTokens)} tokens\uFF0C\u5360\u6BD4 ${percentLabel}`,
-          planTokensSummary: `${formatNumber(summary.totalTokens)} / ${formatNumber(planConfig.tokenLimit)} tokens`,
+          planUsageSummary: `${planConfig.label} \u5957\u9910\u5DF2\u4F7F\u7528 ${formatCost(summary.totalCost)}\uFF0C\u5360\u6BD4 ${percentLabel}`,
+          planTokensSummary: `${formatCost(summary.totalCost)} / ${formatCost(planConfig.costLimit)}`,
           stats: summary.stats,
           quickRanges: toQuickRangeView(quickRanges, state.activeQuickRangeKey),
           filterValues: toFilterValues(state.filter),

@@ -53,22 +53,22 @@ const PLAN_CONFIG = {
   free: {
     label: "Free",
     description: "基础版本，适用于日常轻量使用",
-    tokenLimit: 500_000,
+    costLimit: 0,
   },
   pro: {
     label: "Pro",
-    description: "专业版，约 1,000 万 tokens/月",
-    tokenLimit: 10_000_000,
+    description: "专业版，$20/月",
+    costLimit: 20,
   },
   proPlus: {
     label: "ProPlus",
-    description: "进阶版，约 3,000 万 tokens/月",
-    tokenLimit: 30_000_000,
+    description: "进阶版，$60/月",
+    costLimit: 60,
   },
   ultra: {
     label: "Ultra",
-    description: "旗舰版，约 1 亿 tokens/月",
-    tokenLimit: 100_000_000,
+    description: "旗舰版，$200/月",
+    costLimit: 200,
   },
 } as const;
 
@@ -194,6 +194,19 @@ function bindDelegatedEvents(): void {
       event.preventDefault();
       clearFilters();
       return;
+    }
+
+  });
+
+  root.addEventListener("change", (event) => {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) {
+      return;
+    }
+
+    if (input.dataset.role === "file-input" && input.files?.length) {
+      handleFiles(Array.from(input.files));
+      input.value = "";
     }
   });
 
@@ -477,7 +490,7 @@ function render(): void {
   const modelChips = buildModelChips(modelsAll, selectedModels, modelColors);
   const quickRanges = buildQuickRanges(state.records);
 
-  const percent = computeUsagePercent(summary.totalTokens, planConfig.tokenLimit);
+  const percent = computeUsagePercent(summary.totalCost, planConfig.costLimit);
   const percentLabel = formatPercentLabel(percent);
   const statusMessage = state.records.length
     ? "当前筛选条件下暂无数据，请尝试其他时间范围。"
@@ -493,8 +506,8 @@ function render(): void {
     planUsageLabel: percentLabel,
     planUsageNote: PLAN_USAGE_NOTE,
     planUsageColor: usageColor(percent),
-    planUsageSummary: `${planConfig.label} 套餐已使用 ${formatNumber(summary.totalTokens)} tokens，占比 ${percentLabel}`,
-    planTokensSummary: `${formatNumber(summary.totalTokens)} / ${formatNumber(planConfig.tokenLimit)} tokens`,
+    planUsageSummary: `${planConfig.label} 套餐已使用 ${formatCost(summary.totalCost)}，占比 ${percentLabel}`,
+    planTokensSummary: `${formatCost(summary.totalCost)} / ${formatCost(planConfig.costLimit)}`,
     stats: summary.stats,
     quickRanges: toQuickRangeView(quickRanges, state.activeQuickRangeKey),
     filterValues: toFilterValues(state.filter),
